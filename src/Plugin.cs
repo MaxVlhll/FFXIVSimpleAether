@@ -25,6 +25,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly CurrentResolver resolver = new();
     private readonly MarkerPoster poster = new();
+    private readonly Config config;
+    private readonly ConfigWindow configWindow;
 
     private DateTime lastTick = DateTime.MinValue;
     private HashSet<(uint, TargetKind)> lastPosted = new();
@@ -32,6 +34,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
+        config = Config.Load();
+        configWindow = new ConfigWindow(config);
+
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "SimpleAether. Sous-commandes : dump",
@@ -41,7 +46,12 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update += OnFrameworkUpdate;
         ClientState.TerritoryChanged += OnTerritoryChanged;
         ClientState.Login += OnLogin;
+
+        PluginInterface.UiBuilder.Draw += configWindow.Draw;
+        PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
     }
+
+    private void OpenConfig() => configWindow.IsOpen = true;
 
     private void OnCommand(string command, string args)
     {
@@ -52,6 +62,9 @@ public sealed class Plugin : IDalamudPlugin
                 break;
             case "calibrate":
                 CalibrateMarker();
+                break;
+            case "config":
+                configWindow.IsOpen = true;
                 break;
             default:
                 Log.Information($"SimpleAether actif. Territoire courant : {ClientState.TerritoryType}");
@@ -124,13 +137,25 @@ public sealed class Plugin : IDalamudPlugin
             if (DateTime.UtcNow - lastTick < TimeSpan.FromSeconds(1)) return;
             lastTick = DateTime.UtcNow;
 
+            if (!config.Enabled)
+            {
+                if (lastPosted.Count > 0)
+                {
+                    poster.Clear();
+                    lastPosted = new HashSet<(uint, TargetKind)>();
+                }
+                return;
+            }
+
             if (!ClientState.IsLoggedIn) return;
 
             var mapVisible = AreaMapVisible();
             var mapJustOpened = mapVisible && !lastMapVisible;
             lastMapVisible = mapVisible;
 
-            var targets = resolver.Resolve(ClientState.TerritoryType);
+            var targets = resolver.Resolve(ClientState.TerritoryType)
+                .Where(t => t.Kind == TargetKind.Field ? config.ShowFieldCurrents : config.ShowQuestCurrents)
+                .ToList();
             var signature = new HashSet<(uint, TargetKind)>(
                 targets.Select(t => (t.AetherCurrentId, t.Kind)));
 
@@ -148,7 +173,7 @@ public sealed class Plugin : IDalamudPlugin
             if (map is not { } m) return;
 
             poster.Post(targets, m.SizeFactor, m.OffsetX, m.OffsetY,
-                fieldIconId: 60561, questIconId: 71005, radius: 30);
+                config.FieldIconId, config.QuestIconId, config.MarkerRadius);
         }
         catch (Exception e)
         {
@@ -158,6 +183,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
+        PluginInterface.UiBuilder.Draw -= configWindow.Draw;
         ClientState.Login -= OnLogin;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         Framework.Update -= OnFrameworkUpdate;

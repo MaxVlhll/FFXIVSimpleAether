@@ -171,13 +171,17 @@ public sealed class CurrentResolver
         }
         else Plugin.Log.Warning("Sheet EObj indisponible.");
 
+        // eObjByAetherCurrent est deja rempli ci-dessus : la sheet Level fait des
+        // dizaines de milliers de lignes, mais seule une poignee de EObj nous interesse.
+        var wanted = new HashSet<uint>(eObjByAetherCurrent.Values);
+
         var levelSheet = Plugin.DataManager.GetExcelSheet<Level>();
         if (levelSheet != null)
         {
             foreach (var level in levelSheet)
             {
                 var obj = level.Object.RowId;
-                if (obj == 0) continue;
+                if (obj == 0 || !wanted.Contains(obj)) continue;
                 if (!levelByObject.TryGetValue(obj, out var list))
                     levelByObject[obj] = list = new List<Level>();
                 list.Add(level);

@@ -2,7 +2,7 @@
   "Name": "SimpleAether",
   "Author": "MaxVlhll",
   "Punchline": "Marque les vents ethers manquants sur la carte",
-  "Description": "Pose un marqueur sur la carte a l'emplacement de chaque vent ether non debloque de la zone, et sur le PNJ donneur de chaque quete faisable qui en debloque un.",
+  "Description": "Pose un marqueur sur la carte a l'emplacement de chaque vent ether non debloque de la zone, et sur le PNJ donneur de chaque quete faisable qui en debloque un. Attention : au demarrage et a chaque mise a jour, le plugin efface tous les marqueurs temporaires de la carte et de la minimap (y compris ceux poses par le jeu ou par d'autres plugins), car le jeu n'offre pas de retrait unitaire.",
   "ApplicableVersion": "any",
   "Tags": [ "map", "aether current" ],
   "CategoryTags": [ "UI" ]

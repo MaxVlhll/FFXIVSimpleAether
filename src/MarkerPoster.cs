@@ -7,8 +7,10 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 namespace SimpleAether;
 
 /// <summary>
-/// Seul endroit qui touche AgentMap. Si l'API bouge a un patch, c'est ici et
-/// nulle part ailleurs.
+/// Seul endroit qui touche AgentMap. D'autres fichiers dependent aussi de
+/// structures internes du jeu (PlayerState/QuestManager dans CurrentResolver,
+/// GetAddonByName/AtkUnitBasePtr dans Plugin) et peuvent tout autant casser a
+/// un patch ; seul l'acces a AgentMap est isole ici.
 /// </summary>
 public sealed class MarkerPoster
 {
@@ -16,6 +18,9 @@ public sealed class MarkerPoster
     private const int MaxMarkers = 12;
 
     private bool hasPosted;
+
+    /// True si le dernier appel a Post/PostCalibrationMarker a effectivement pose un marqueur.
+    public bool HasPosted => hasPosted;
 
     public unsafe void Clear()
     {
@@ -29,14 +34,15 @@ public sealed class MarkerPoster
         hasPosted = false;
     }
 
-    public unsafe void Post(IReadOnlyList<AetherTarget> targets,
+    /// <returns>true si au moins un marqueur a ete pose.</returns>
+    public unsafe bool Post(IReadOnlyList<AetherTarget> targets,
         ushort sizeFactor, short offsetX, short offsetY,
         uint fieldIconId, uint questIconId, int radius)
     {
         Clear();
 
         var agent = AgentMap.Instance();
-        if (agent == null || targets.Count == 0) return;
+        if (agent == null || targets.Count == 0) return false;
 
         // Les vents de terrain passent avant les vents de quete quand il faut trancher.
         var ordered = targets.OrderBy(t => t.Kind == TargetKind.Field ? 0 : 1).ToList();
@@ -51,21 +57,21 @@ public sealed class MarkerPoster
         for (var i = 0; i < count; i++)
         {
             var t = ordered[i];
-            var coord = MapCoords.WorldToMap(t.WorldPos, sizeFactor, offsetX, offsetY);
             var iconId = t.Kind == TargetKind.Field ? fieldIconId : questIconId;
-            agent->AddGatheringTempMarker(
-                (int)MathF.Round(coord.X), (int)MathF.Round(coord.Y),
-                radius, iconId, 4, t.Label);
+            Add(agent, t.WorldPos, sizeFactor, offsetX, offsetY, iconId, radius, t.Label);
         }
         hasPosted = true;
+        return true;
     }
 
     /// <summary>
     /// Pose un marqueur unique a la position du joueur. Sert a calibrer l'unite
     /// attendue par AddGatheringTempMarker, que la signature ne precise pas.
+    /// Prend l'icone et le rayon en parametres pour passer exactement par la meme
+    /// conversion que Post, via le meme helper Add.
     /// </summary>
     public unsafe void PostCalibrationMarker(Vector3 playerWorldPos,
-        ushort sizeFactor, short offsetX, short offsetY)
+        ushort sizeFactor, short offsetX, short offsetY, uint iconId, int radius)
     {
         Clear();
         var agent = AgentMap.Instance();
@@ -75,8 +81,19 @@ public sealed class MarkerPoster
         Plugin.Log.Information(
             $"calibration : monde=({playerWorldPos.X:0.0}, {playerWorldPos.Z:0.0}) " +
             $"carte=({coord.X:0.0}, {coord.Y:0.0}) envoye=({(int)MathF.Round(coord.X)}, {(int)MathF.Round(coord.Y)})");
-        agent->AddGatheringTempMarker(
-            (int)MathF.Round(coord.X), (int)MathF.Round(coord.Y), 30, 60561, 4, "calibration");
+        Add(agent, playerWorldPos, sizeFactor, offsetX, offsetY, iconId, radius, "calibration");
         hasPosted = true;
+    }
+
+    /// Seul point d'appel a AddGatheringTempMarker : Post et PostCalibrationMarker
+    /// passent tous les deux par ici, donc utilisent toujours la meme conversion.
+    private static unsafe void Add(AgentMap* agent, Vector3 worldPos,
+        ushort sizeFactor, short offsetX, short offsetY,
+        uint iconId, int radius, string tooltip)
+    {
+        var coord = MapCoords.WorldToMap(worldPos, sizeFactor, offsetX, offsetY);
+        agent->AddGatheringTempMarker(
+            (int)MathF.Round(coord.X), (int)MathF.Round(coord.Y),
+            radius, iconId, 4, tooltip);
     }
 }

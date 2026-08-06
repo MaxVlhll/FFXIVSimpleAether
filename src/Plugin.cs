@@ -40,7 +40,7 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "SimpleAether. Sous-commandes : dump",
+            HelpMessage = "SimpleAether. Sous-commandes : dump, calibrate, config",
         });
         Log.Information("SimpleAether charge.");
 
@@ -109,7 +109,8 @@ public sealed class Plugin : IDalamudPlugin
             Log.Warning("calibration : carte introuvable pour ce territoire.");
             return;
         }
-        poster.PostCalibrationMarker(player.Position, m.SizeFactor, m.OffsetX, m.OffsetY);
+        poster.PostCalibrationMarker(player.Position, m.SizeFactor, m.OffsetX, m.OffsetY,
+            config.FieldIconId, config.MarkerRadius);
     }
 
     private void OnTerritoryChanged(uint territoryId)
@@ -140,7 +141,7 @@ public sealed class Plugin : IDalamudPlugin
 
             if (!config.Enabled)
             {
-                if (lastPosted.Count > 0)
+                if (poster.HasPosted)
                 {
                     poster.Clear();
                     lastPosted = new HashSet<(uint, TargetKind)>();
@@ -148,7 +149,7 @@ public sealed class Plugin : IDalamudPlugin
                 return;
             }
 
-            if (!ClientState.IsLoggedIn) return;
+            if (!ClientState.IsLoggedIn || ObjectTable.LocalPlayer == null) return;
 
             var mapVisible = AreaMapVisible();
             var mapJustOpened = mapVisible && !lastMapVisible;
@@ -162,21 +163,25 @@ public sealed class Plugin : IDalamudPlugin
 
             var style = (config.FieldIconId, config.QuestIconId, config.MarkerRadius);
             if (!mapJustOpened && style == lastStyle && signature.SetEquals(lastPosted)) return;
-            lastStyle = style;
-            lastPosted = signature;
 
             if (targets.Count == 0)
             {
                 poster.Clear();
+                lastStyle = style;
+                lastPosted = signature;
                 return;
             }
 
             var map = DataManager.GetExcelSheet<TerritoryType>()
                 ?.GetRowOrDefault(ClientState.TerritoryType)?.Map.ValueNullable;
-            if (map is not { } m) return;
+            if (map is not { } m) return;   // pas d'etat mis a jour -> retente au tick suivant
 
-            poster.Post(targets, m.SizeFactor, m.OffsetX, m.OffsetY,
-                config.FieldIconId, config.QuestIconId, config.MarkerRadius);
+            if (poster.Post(targets, m.SizeFactor, m.OffsetX, m.OffsetY,
+                config.FieldIconId, config.QuestIconId, config.MarkerRadius))
+            {
+                lastStyle = style;
+                lastPosted = signature;
+            }
         }
         catch (Exception e)
         {
@@ -191,7 +196,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Login -= OnLogin;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         Framework.Update -= OnFrameworkUpdate;
-        poster.Clear();
         CommandManager.RemoveHandler(CommandName);
+        try { poster.Clear(); } catch (Exception e) { Log.Error(e, "clear markers on unload"); }
     }
 }

@@ -31,6 +31,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime lastTick = DateTime.MinValue;
     private HashSet<(uint, TargetKind)> lastPosted = new();
     private bool lastMapVisible;
+    private (uint, uint, int) lastStyle;
 
     public Plugin()
     {
@@ -159,7 +160,9 @@ public sealed class Plugin : IDalamudPlugin
             var signature = new HashSet<(uint, TargetKind)>(
                 targets.Select(t => (t.AetherCurrentId, t.Kind)));
 
-            if (!mapJustOpened && signature.SetEquals(lastPosted)) return;
+            var style = (config.FieldIconId, config.QuestIconId, config.MarkerRadius);
+            if (!mapJustOpened && style == lastStyle && signature.SetEquals(lastPosted)) return;
+            lastStyle = style;
             lastPosted = signature;
 
             if (targets.Count == 0)

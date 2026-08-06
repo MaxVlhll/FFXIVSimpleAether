@@ -22,8 +22,9 @@ public sealed class CurrentResolver
     private readonly Dictionary<uint, List<Candidate>> cache = new();
     private readonly HashSet<uint> loggedMissing = new();
 
-    // EObj.RowId -> Level, pour retrouver la position d'un objet du monde.
-    private Dictionary<uint, Level>? levelByObject;
+    // EObj.RowId -> Level(s), pour retrouver la position d'un objet du monde.
+    // Un meme EObj peut etre place dans plusieurs territoires : filtrer par territoire a l'usage.
+    private Dictionary<uint, List<Level>>? levelByObject;
     // AetherCurrent.RowId -> EObj.RowId.
     private Dictionary<uint, uint>? eObjByAetherCurrent;
 
@@ -121,17 +122,28 @@ public sealed class CurrentResolver
             }
             else
             {
+                Level? level = null;
                 if (eObjByAetherCurrent!.TryGetValue(currentRef.RowId, out var eObjId)
-                    && levelByObject!.TryGetValue(eObjId, out var level))
+                    && levelByObject!.TryGetValue(eObjId, out var levels))
+                {
+                    foreach (var l in levels)
+                    {
+                        if (l.Territory.RowId != territoryId) continue;
+                        level = l;
+                        break;
+                    }
+                }
+
+                if (level is { } l2)
                 {
                     result.Add(new Candidate(
-                        new Vector3(level.X, level.Y, level.Z),
+                        new Vector3(l2.X, l2.Y, l2.Z),
                         TargetKind.Field, currentRef.RowId, 0, "Vent ethere"));
                 }
                 else
                 {
                     WarnOnce(currentRef.RowId,
-                        $"vent de terrain {currentRef.RowId} : jointure EObj/Level vide");
+                        $"vent de terrain {currentRef.RowId} : jointure EObj/Level vide ou hors territoire {territoryId}");
                 }
             }
         }
@@ -145,7 +157,7 @@ public sealed class CurrentResolver
     {
         if (levelByObject != null && eObjByAetherCurrent != null) return;
 
-        levelByObject = new Dictionary<uint, Level>();
+        levelByObject = new Dictionary<uint, List<Level>>();
         eObjByAetherCurrent = new Dictionary<uint, uint>();
 
         var eObjSheet = Plugin.DataManager.GetExcelSheet<EObj>();
@@ -165,7 +177,10 @@ public sealed class CurrentResolver
             foreach (var level in levelSheet)
             {
                 var obj = level.Object.RowId;
-                if (obj != 0) levelByObject.TryAdd(obj, level);
+                if (obj == 0) continue;
+                if (!levelByObject.TryGetValue(obj, out var list))
+                    levelByObject[obj] = list = new List<Level>();
+                list.Add(level);
             }
         }
         else Plugin.Log.Warning("Sheet Level indisponible.");

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Game.Command;
@@ -20,27 +19,26 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
 
     private const string CommandName = "/saether";
 
     private readonly CurrentResolver resolver = new();
-    private readonly MarkerPoster poster = new();
+    private readonly MapOverlay overlay;
     private readonly Config config;
     private readonly ConfigWindow configWindow;
 
     private DateTime lastTick = DateTime.MinValue;
-    private HashSet<(uint, TargetKind)> lastPosted = new();
-    private bool lastMapVisible;
-    private (uint, uint, int) lastStyle;
 
     public Plugin()
     {
         config = Config.Load();
         configWindow = new ConfigWindow(config);
+        overlay = new MapOverlay(config);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "SimpleAether. Sous-commandes : dump, calibrate, config",
+            HelpMessage = "SimpleAether. Sous-commandes : dump, config",
         });
         Log.Information("SimpleAether charge.");
 
@@ -49,6 +47,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Login += OnLogin;
 
         PluginInterface.UiBuilder.Draw += configWindow.Draw;
+        PluginInterface.UiBuilder.Draw += overlay.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
     }
 
@@ -60,9 +59,6 @@ public sealed class Plugin : IDalamudPlugin
         {
             case "dump":
                 DumpCurrentZone();
-                break;
-            case "calibrate":
-                CalibrateMarker();
                 break;
             case "config":
                 configWindow.IsOpen = true;
@@ -94,43 +90,13 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void CalibrateMarker()
-    {
-        var player = ObjectTable.LocalPlayer;
-        if (player == null)
-        {
-            Log.Warning("calibration : pas de joueur local.");
-            return;
-        }
-        var map = DataManager.GetExcelSheet<TerritoryType>()
-            ?.GetRowOrDefault(ClientState.TerritoryType)?.Map.ValueNullable;
-        if (map is not { } m)
-        {
-            Log.Warning("calibration : carte introuvable pour ce territoire.");
-            return;
-        }
-        poster.PostCalibrationMarker(player.Position, m.SizeFactor, m.OffsetX, m.OffsetY,
-            config.FieldIconId, config.MarkerRadius);
-    }
-
     private void OnTerritoryChanged(uint territoryId)
     {
         resolver.InvalidateCache();
-        lastPosted = new HashSet<(uint, TargetKind)>();
-        poster.Clear();
+        overlay.Targets = [];
     }
 
-    private void OnLogin()
-    {
-        resolver.InvalidateCache();
-        lastPosted = new HashSet<(uint, TargetKind)>();
-    }
-
-    private bool AreaMapVisible()
-    {
-        var addon = GameGui.GetAddonByName("AreaMap");
-        return !addon.IsNull && addon.IsVisible;
-    }
+    private void OnLogin() => resolver.InvalidateCache();
 
     private void OnFrameworkUpdate(IFramework framework)
     {
@@ -139,49 +105,14 @@ public sealed class Plugin : IDalamudPlugin
             if (DateTime.UtcNow - lastTick < TimeSpan.FromSeconds(1)) return;
             lastTick = DateTime.UtcNow;
 
-            if (!config.Enabled)
-            {
-                if (poster.HasPosted)
-                {
-                    poster.Clear();
-                    lastPosted = new HashSet<(uint, TargetKind)>();
-                }
-                return;
-            }
-
-            if (!ClientState.IsLoggedIn || ObjectTable.LocalPlayer == null) return;
-
-            var mapVisible = AreaMapVisible();
-            var mapJustOpened = mapVisible && !lastMapVisible;
-            lastMapVisible = mapVisible;
-
-            var targets = resolver.Resolve(ClientState.TerritoryType)
-                .Where(t => t.Kind == TargetKind.Field ? config.ShowFieldCurrents : config.ShowQuestCurrents)
-                .ToList();
-            var signature = new HashSet<(uint, TargetKind)>(
-                targets.Select(t => (t.AetherCurrentId, t.Kind)));
-
-            var style = (config.FieldIconId, config.QuestIconId, config.MarkerRadius);
-            if (!mapJustOpened && style == lastStyle && signature.SetEquals(lastPosted)) return;
-
-            if (targets.Count == 0)
-            {
-                poster.Clear();
-                lastStyle = style;
-                lastPosted = signature;
-                return;
-            }
-
-            var map = DataManager.GetExcelSheet<TerritoryType>()
-                ?.GetRowOrDefault(ClientState.TerritoryType)?.Map.ValueNullable;
-            if (map is not { } m) return;   // pas d'etat mis a jour -> retente au tick suivant
-
-            if (poster.Post(targets, m.SizeFactor, m.OffsetX, m.OffsetY,
-                config.FieldIconId, config.QuestIconId, config.MarkerRadius))
-            {
-                lastStyle = style;
-                lastPosted = signature;
-            }
+            // L'overlay redessine a chaque frame depuis cette liste : il suffit de la
+            // tenir a jour. Plus de gate anti-repost -- elle n'existait que pour eviter
+            // de reposter des marqueurs de jeu et de rouvrir la carte a chaque fois.
+            overlay.Targets = config.Enabled && ClientState.IsLoggedIn && ObjectTable.LocalPlayer != null
+                ? resolver.Resolve(ClientState.TerritoryType)
+                    .Where(t => t.Kind == TargetKind.Field ? config.ShowFieldCurrents : config.ShowQuestCurrents)
+                    .ToList()
+                : [];
         }
         catch (Exception e)
         {
@@ -192,11 +123,11 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
+        PluginInterface.UiBuilder.Draw -= overlay.Draw;
         PluginInterface.UiBuilder.Draw -= configWindow.Draw;
         ClientState.Login -= OnLogin;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         Framework.Update -= OnFrameworkUpdate;
         CommandManager.RemoveHandler(CommandName);
-        try { poster.Clear(); } catch (Exception e) { Log.Error(e, "clear markers on unload"); }
     }
 }

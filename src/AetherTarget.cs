@@ -15,4 +15,6 @@ public readonly record struct AetherTarget(
     Vector3 WorldPos,
     TargetKind Kind,
     uint AetherCurrentId,
-    string Label);
+    string Label,
+    /// Icone dictee par les donnees du jeu, 0 si aucune : l'appelant retombe sur la config.
+    uint IconId);

@@ -11,9 +11,9 @@ public sealed class Config : IPluginConfiguration
     public bool Enabled = true;
     public bool ShowFieldCurrents = true;
     public bool ShowQuestCurrents = true;
-    public uint FieldIconId = 60561;
-    public uint QuestIconId = 71005;
-    public int MarkerRadius = 30;
+
+    /// Repli seulement : les vents de quete prennent l'icone dictee par EventIconType.
+    public uint QuestIconId = 71000;
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 

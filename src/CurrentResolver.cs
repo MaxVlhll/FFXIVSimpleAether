@@ -17,7 +17,7 @@ namespace SimpleAether;
 public sealed class CurrentResolver
 {
     private readonly record struct Candidate(
-        Vector3 WorldPos, TargetKind Kind, uint AetherCurrentId, uint QuestId, string Label);
+        Vector3 WorldPos, TargetKind Kind, uint AetherCurrentId, uint QuestId, string Label, uint IconId);
 
     private readonly Dictionary<uint, List<Candidate>> cache = new();
     private readonly HashSet<uint> loggedMissing = new();
@@ -49,7 +49,7 @@ public sealed class CurrentResolver
         {
             if (IsUnlocked(c.AetherCurrentId)) continue;
             if (c.Kind == TargetKind.Quest && !IsQuestWorthShowing(c.QuestId)) continue;
-            result.Add(new AetherTarget(c.WorldPos, c.Kind, c.AetherCurrentId, c.Label));
+            result.Add(new AetherTarget(c.WorldPos, c.Kind, c.AetherCurrentId, c.Label, c.IconId));
         }
         return result;
     }
@@ -116,9 +116,12 @@ public sealed class CurrentResolver
                     continue;
                 }
                 var label = quest?.Name.ExtractText() ?? "Quete";
+                // Les quetes de vents ne partagent pas toutes le meme marqueur : le jeu
+                // le tire de EventIconType, qui varie (mesure : 71000, 71020, 71140).
+                var icon = quest?.EventIconType.ValueNullable?.MapIconAvailable ?? 0;
                 result.Add(new Candidate(
                     new Vector3(level.Value.X, level.Value.Y, level.Value.Z),
-                    TargetKind.Quest, currentRef.RowId, questId, label));
+                    TargetKind.Quest, currentRef.RowId, questId, label, icon));
             }
             else
             {
@@ -138,7 +141,7 @@ public sealed class CurrentResolver
                 {
                     result.Add(new Candidate(
                         new Vector3(l2.X, l2.Y, l2.Z),
-                        TargetKind.Field, currentRef.RowId, 0, "Vent ethere"));
+                        TargetKind.Field, currentRef.RowId, 0, "Vent ethere", 0));
                 }
                 else
                 {

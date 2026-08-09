@@ -51,6 +51,9 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw += configWindow.Draw;
         PluginInterface.UiBuilder.Draw += overlay.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
+        // Le plugin n'a qu'une fenetre : elle est a la fois la config et l'entree
+        // principale. Sans OpenMainUi, Dalamud signale le plugin comme incomplet.
+        PluginInterface.UiBuilder.OpenMainUi += OpenConfig;
     }
 
     /// <summary>
@@ -137,6 +140,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        PluginInterface.UiBuilder.OpenMainUi -= OpenConfig;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
         PluginInterface.UiBuilder.Draw -= overlay.Draw;
         PluginInterface.UiBuilder.Draw -= configWindow.Draw;

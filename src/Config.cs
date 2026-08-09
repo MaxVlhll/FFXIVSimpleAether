@@ -12,8 +12,10 @@ public sealed class Config : IPluginConfiguration
     public bool ShowFieldCurrents = true;
     public bool ShowQuestCurrents = true;
 
-    /// Repli seulement : les vents de quete prennent l'icone dictee par EventIconType.
-    public uint QuestIconId = 71000;
+    /// Marqueur de vent ethere du jeu. 0 = losange vert trace par l'overlay.
+    public uint FieldIconId = 60033;
+
+    public uint QuestIconId = 60013;
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 

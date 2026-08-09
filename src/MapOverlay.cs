@@ -73,15 +73,14 @@ public sealed class MapOverlay
             var min = pos - half;
             var max = pos + half;
 
-            if (t.Kind == TargetKind.Field)
+            var iconId = IconFor(t, config);
+            if (iconId == 0)
             {
                 DrawDiamond(draw, pos, IconSize / 2f);
             }
             else
             {
-                var iconId = t.IconId != 0 ? t.IconId : config.QuestIconId;
-                var texture = Plugin.TextureProvider.GetFromGameIcon(new GameIconLookup(iconId))
-                    .GetWrapOrDefault();
+                var texture = Plugin.Icon(iconId);
                 if (texture != null)
                     draw.AddImage(texture.Handle, min, max);
             }
@@ -120,6 +119,10 @@ public sealed class MapOverlay
         draw.AddQuadFilled(top, right, bottom, left, 0xFF64D94C);
         draw.AddQuad(top, right, bottom, left, 0xC8102010, 2f);
     }
+
+    /// Icone effective d'une cible, 0 = losange trace a la main.
+    public static uint IconFor(AetherTarget t, Config config) =>
+        t.Kind == TargetKind.Field ? config.FieldIconId : config.QuestIconId;
 
     /// Rogne au conteneur de la carte : sans ca les pastilles debordent sur le cadre
     /// de la fenetre et sur le reste de l'ecran des qu'on zoome.

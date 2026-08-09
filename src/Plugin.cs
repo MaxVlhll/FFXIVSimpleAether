@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Game.Command;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -51,6 +53,16 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
     }
 
+    /// <summary>
+    /// GetFromGameIcon leve une IconNotFoundException sur un id inexistant, et la
+    /// numerotation des icones est trouee. Tout passe donc par ici : un id absent
+    /// vaut "rien a dessiner", pas une exception en pleine frame.
+    /// </summary>
+    public static IDalamudTextureWrap? Icon(uint iconId) =>
+        iconId != 0 && TextureProvider.TryGetFromGameIcon(new GameIconLookup(iconId), out var shared)
+            ? shared.GetWrapOrDefault()
+            : null;
+
     private void OpenConfig() => configWindow.IsOpen = true;
 
     private void OnCommand(string command, string args)
@@ -83,8 +95,11 @@ public sealed class Plugin : IDalamudPlugin
             var coord = map is { } m
                 ? MapCoords.WorldToMap(t.WorldPos, m.SizeFactor, m.OffsetX, m.OffsetY)
                 : new Vector2(float.NaN, float.NaN);
+            var iconId = MapOverlay.IconFor(t, config);
+            var texture = Icon(iconId);
             Log.Information(
-                $"  [{t.Kind}] id={t.AetherCurrentId} " +
+                $"  [{t.Kind}] id={t.AetherCurrentId} icone={iconId} " +
+                $"texture={(texture != null ? "chargee" : "NULL")} " +
                 $"monde=({t.WorldPos.X:0.0}, {t.WorldPos.Y:0.0}, {t.WorldPos.Z:0.0}) " +
                 $"carte=({coord.X:0.0}, {coord.Y:0.0}) \"{t.Label}\"");
         }

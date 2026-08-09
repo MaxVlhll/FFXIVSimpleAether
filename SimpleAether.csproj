@@ -10,4 +10,9 @@
     <Compile Remove="tests/**/*.cs" />
   </ItemGroup>
 
+  <!-- Dalamud lit images/icon.png a cote du DLL, pas a la racine du depot. -->
+  <ItemGroup>
+    <None Include="images/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

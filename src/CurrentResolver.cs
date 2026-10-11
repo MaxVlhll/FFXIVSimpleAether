@@ -115,7 +115,7 @@ public sealed class CurrentResolver
                     WarnOnce(currentRef.RowId, $"vent de quete {currentRef.RowId} : IssuerLocation introuvable");
                     continue;
                 }
-                var label = quest?.Name.ExtractText() ?? "Quete";
+                var label = quest?.Name.ExtractText() ?? "Quest";
                 result.Add(new Candidate(
                     new Vector3(level.Value.X, level.Value.Y, level.Value.Z),
                     TargetKind.Quest, currentRef.RowId, questId, label));
@@ -138,7 +138,7 @@ public sealed class CurrentResolver
                 {
                     result.Add(new Candidate(
                         new Vector3(l2.X, l2.Y, l2.Z),
-                        TargetKind.Field, currentRef.RowId, 0, "Vent ethere"));
+                        TargetKind.Field, currentRef.RowId, 0, "Aether current"));
                 }
                 else
                 {

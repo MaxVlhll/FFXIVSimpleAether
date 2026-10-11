@@ -4,6 +4,7 @@ using System.Numerics;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -29,6 +30,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MapOverlay overlay;
     private readonly Config config;
     private readonly ConfigWindow configWindow;
+    private readonly WindowSystem windowSystem = new("SimpleAether");
 
     private DateTime lastTick = DateTime.MinValue;
 
@@ -36,11 +38,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         config = Config.Load();
         configWindow = new ConfigWindow(config);
+        windowSystem.AddWindow(configWindow);
         overlay = new MapOverlay(config);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "SimpleAether. Sous-commandes : dump, config",
+            HelpMessage = "SimpleAether. Subcommands: config (settings), dump (log current zone)",
         });
         Log.Information("SimpleAether charge.");
 
@@ -48,7 +51,7 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.TerritoryChanged += OnTerritoryChanged;
         ClientState.Login += OnLogin;
 
-        PluginInterface.UiBuilder.Draw += configWindow.Draw;
+        PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.Draw += overlay.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += OpenConfig;
         // Le plugin n'a qu'une fenetre : elle est a la fois la config et l'entree
@@ -143,7 +146,8 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= OpenConfig;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfig;
         PluginInterface.UiBuilder.Draw -= overlay.Draw;
-        PluginInterface.UiBuilder.Draw -= configWindow.Draw;
+        PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        windowSystem.RemoveAllWindows();
         ClientState.Login -= OnLogin;
         ClientState.TerritoryChanged -= OnTerritoryChanged;
         Framework.Update -= OnFrameworkUpdate;

@@ -3,7 +3,7 @@
     "Author": "MaxVlhll",
     "Name": "SimpleAether",
     "InternalName": "SimpleAether",
-    "AssemblyVersion": "0.1.0.0",
+    "AssemblyVersion": "0.1.1.0",
     "Punchline": "Marks your missing aether currents on the map",
     "Description": "Draws a marker on the map at every aether current you haven't unlocked in the current zone, and on the quest giver of every available quest that rewards one. Markers are drawn as an overlay: the plugin never places in-game map markers and leaves those from the game or other plugins alone. Both marker icons are configurable.",
     "ApplicableVersion": "any",

@@ -2,10 +2,11 @@ using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Windowing;
 
 namespace SimpleAether;
 
-public sealed class ConfigWindow
+public sealed class ConfigWindow : Window
 {
     private const int BrowsePerRow = 10;
     private const int BrowseCount = 100;
@@ -15,51 +16,44 @@ public sealed class ConfigWindow
     /// Debut de la planche d'icones ; 60550 tombe sur les marqueurs de carte.
     private int browseStart = 60550;
 
-    public bool IsOpen;
-
-    public ConfigWindow(Config config) => this.config = config;
-
-    public void Draw()
+    public ConfigWindow(Config config) : base("SimpleAether###SimpleAetherConfig")
     {
-        if (!IsOpen) return;
+        this.config = config;
+    }
 
-        var open = IsOpen;
-        if (ImGui.Begin("SimpleAether", ref open))
+    public override void Draw()
+    {
+        var changed = false;
+
+        changed |= ImGui.Checkbox("Enable plugin", ref config.Enabled);
+        changed |= ImGui.Checkbox("Mark field aether currents", ref config.ShowFieldCurrents);
+        changed |= ImGui.Checkbox("Mark quest aether currents", ref config.ShowQuestCurrents);
+
+        ImGui.Separator();
+
+        var fieldIcon = (int)config.FieldIconId;
+        if (ImGui.InputInt("Field current icon (0 = diamond)", ref fieldIcon))
         {
-            var changed = false;
-
-            changed |= ImGui.Checkbox("Activer le plugin", ref config.Enabled);
-            changed |= ImGui.Checkbox("Marquer les vents de terrain", ref config.ShowFieldCurrents);
-            changed |= ImGui.Checkbox("Marquer les vents de quete", ref config.ShowQuestCurrents);
-
-            ImGui.Separator();
-
-            var fieldIcon = (int)config.FieldIconId;
-            if (ImGui.InputInt("Icone vents de terrain (0 = losange)", ref fieldIcon))
-            {
-                config.FieldIconId = (uint)Math.Max(0, fieldIcon);
-                changed = true;
-            }
-            Preview(config.FieldIconId);
-
-            var questIcon = (int)config.QuestIconId;
-            if (ImGui.InputInt("Icone vents de quete", ref questIcon))
-            {
-                config.QuestIconId = (uint)Math.Max(0, questIcon);
-                changed = true;
-            }
-            Preview(config.QuestIconId);
-
-            changed |= ImGui.SliderFloat(
-                "Decalage vertical des quetes", ref config.QuestOffsetY, -64f, 64f, "%.0f px");
-
-            ImGui.Separator();
-            changed |= DrawBrowser();
-
-            if (changed) config.Save();
+            config.FieldIconId = (uint)Math.Max(0, fieldIcon);
+            changed = true;
         }
-        ImGui.End();
-        IsOpen = open;
+        Preview(config.FieldIconId);
+
+        var questIcon = (int)config.QuestIconId;
+        if (ImGui.InputInt("Quest current icon", ref questIcon))
+        {
+            config.QuestIconId = (uint)Math.Max(0, questIcon);
+            changed = true;
+        }
+        Preview(config.QuestIconId);
+
+        changed |= ImGui.SliderFloat(
+            "Quest marker vertical offset", ref config.QuestOffsetY, -64f, 64f, "%.0f px");
+
+        ImGui.Separator();
+        changed |= DrawBrowser();
+
+        if (changed) config.Save();
     }
 
     /// <summary>
@@ -69,11 +63,11 @@ public sealed class ConfigWindow
     /// </summary>
     private bool DrawBrowser()
     {
-        if (!ImGui.CollapsingHeader("Chercher une icone")) return false;
+        if (!ImGui.CollapsingHeader("Browse icons")) return false;
 
-        ImGui.InputInt("Premier id", ref browseStart);
+        ImGui.InputInt("First id", ref browseStart);
         browseStart = Math.Max(0, browseStart);
-        ImGui.TextDisabled("Clic = terrain, clic droit = quete. Marqueurs carte vers 60000-60600.");
+        ImGui.TextDisabled("Left click = field, right click = quest. Map markers are around 60000-60600.");
 
         var changed = false;
         for (var i = 0; i < BrowseCount; i++)
@@ -99,10 +93,10 @@ public sealed class ConfigWindow
     /// une fois par essai.
     private static void Preview(uint iconId)
     {
-        if (iconId == 0) { ImGui.TextDisabled("losange vert trace"); return; }
+        if (iconId == 0) { ImGui.TextDisabled("drawn green diamond"); return; }
 
         var texture = Plugin.Icon(iconId);
-        if (texture == null) { ImGui.TextDisabled($"icone {iconId} introuvable"); return; }
+        if (texture == null) { ImGui.TextDisabled($"icon {iconId} not found"); return; }
 
         ImGui.Image(texture.Handle, new Vector2(32f));
     }

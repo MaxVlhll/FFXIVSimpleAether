@@ -1,22 +1,24 @@
 # SimpleAether
 
-Plugin Dalamud pour FFXIV : marque sur la carte les vents éthérés pas encore débloqués de la zone, ainsi que les PNJ donneurs des quêtes faisables qui en débloquent un.
+A Dalamud plugin for FFXIV that marks the aether currents you haven't unlocked yet on the map, along with the quest givers for any available quest that rewards one.
 
-![Carte avec les vents éthérés manquants](images/screenshot.png)
+![Map showing the missing aether currents](images/screenshot.png)
 
 ## Installation
 
-1. En jeu, tape `/xlsettings` et va dans l'onglet **Experimental**.
-2. Dans **Custom Plugin Repositories**, colle cette URL, coche la case **Enabled**, puis clique sur **+** et **Save and Close** :
+1. In game, type `/xlsettings` and open the **Experimental** tab.
+2. Under **Custom Plugin Repositories**, paste this URL, tick **Enabled**, then click **+** and **Save and Close**:
    ```
    https://raw.githubusercontent.com/MaxVlhll/FFXIVSimpleAether/master/repo.json
    ```
-3. Tape `/xlplugins`, cherche **SimpleAether** et installe-le.
+3. Type `/xlplugins`, search for **SimpleAether** and install it.
 
-## Utilisation
+## Usage
 
-Ouvre la carte : les vents éthérés manquants apparaissent dessus. Les icônes et le décalage des marqueurs de quête se règlent dans la fenêtre de configuration du plugin (`/xlplugins`, puis l'engrenage).
+Open the map: the missing aether currents show up on it. Marker icons and the vertical offset of quest markers can be changed in the plugin's settings window (`/xlplugins`, then the cog icon).
 
-## Licence
+The markers are drawn as an overlay. The plugin never places in-game map markers and leaves the game's and other plugins' markers alone.
 
-AGPL-3.0, voir [LICENSE](LICENSE).
+## License
+
+AGPL-3.0, see [LICENSE](LICENSE).

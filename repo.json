@@ -4,15 +4,22 @@
     "Name": "SimpleAether",
     "InternalName": "SimpleAether",
     "AssemblyVersion": "0.1.0.0",
-    "Punchline": "Marque les vents ethers manquants sur la carte",
-    "Description": "Dessine un marqueur sur la carte a l'emplacement de chaque vent ether non debloque de la zone, et sur le PNJ donneur de chaque quete faisable qui en debloque un. Le trace se fait en surimpression : le plugin ne pose aucun marqueur de jeu et ne touche pas a ceux poses par le jeu ou par d'autres plugins. Les icones des deux types de marqueurs sont configurables.",
+    "Punchline": "Marks your missing aether currents on the map",
+    "Description": "Draws a marker on the map at every aether current you haven't unlocked in the current zone, and on the quest giver of every available quest that rewards one. Markers are drawn as an overlay: the plugin never places in-game map markers and leaves those from the game or other plugins alone. Both marker icons are configurable.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/MaxVlhll/FFXIVSimpleAether",
-    "Tags": [ "map", "aether current" ],
-    "CategoryTags": [ "UI" ],
+    "Tags": [
+      "map",
+      "aether current"
+    ],
+    "CategoryTags": [
+      "UI"
+    ],
     "DalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/MaxVlhll/FFXIVSimpleAether/master/images/icon.png",
-    "ImageUrls": [ "https://raw.githubusercontent.com/MaxVlhll/FFXIVSimpleAether/master/images/screenshot.png" ],
+    "ImageUrls": [
+      "https://raw.githubusercontent.com/MaxVlhll/FFXIVSimpleAether/master/images/screenshot.png"
+    ],
     "DownloadLinkInstall": "https://github.com/MaxVlhll/FFXIVSimpleAether/releases/latest/download/latest.zip",
     "DownloadLinkUpdate": "https://github.com/MaxVlhll/FFXIVSimpleAether/releases/latest/download/latest.zip",
     "DownloadLinkTesting": "https://github.com/MaxVlhll/FFXIVSimpleAether/releases/latest/download/latest.zip"

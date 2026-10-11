@@ -17,6 +17,10 @@ public sealed class Config : IPluginConfiguration
 
     public uint QuestIconId = 60013;
 
+    /// Le jeu dessine deja son propre marqueur sur le PNJ donneur. Sans decalage les
+    /// deux se superposent : negatif = au-dessus, positif = en dessous.
+    public float QuestOffsetY = -28f;
+
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 
     public static Config Load()

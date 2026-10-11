@@ -50,6 +50,9 @@ public sealed class ConfigWindow
             }
             Preview(config.QuestIconId);
 
+            changed |= ImGui.SliderFloat(
+                "Decalage vertical des quetes", ref config.QuestOffsetY, -64f, 64f, "%.0f px");
+
             ImGui.Separator();
             changed |= DrawBrowser();
 

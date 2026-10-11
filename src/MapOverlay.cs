@@ -14,10 +14,10 @@ namespace SimpleAether;
 /// recadrage de la vue a chaque redessin, un plafond de 6 cibles, et le mode carte
 /// bascule en "recherche de recolte".
 ///
-/// La conversion monde -> ecran est un delta plutot qu'une formule absolue : le pin du
-/// joueur donne l'origine ecran, et sa position monde est lue dans le meme struct que
-/// l'echelle. Zoom, panoramique et deplacement de la fenetre sont donc absorbes sans
-/// que ce fichier ait a les connaitre.
+/// La conversion monde -> ecran est un delta plutot qu'une formule absolue : le centre
+/// du conteneur de carte donne l'origine ecran, et MapOffsetX/Y sa position monde.
+/// Zoom, panoramique et deplacement de la fenetre sont donc absorbes sans que ce
+/// fichier ait a les connaitre.
 /// </summary>
 public sealed class MapOverlay
 {
@@ -45,21 +45,17 @@ public sealed class MapOverlay
         if (agent->SelectedMapId != agent->CurrentMapId) return;
 
         var addon = (AddonAreaMap*)ptr.Address;
-        var pin = addon->AreaMap.Atk2DMap.PlayerPin;
-        if (pin == null) return;
+        var clip = ClipRect(addon);
+        if (clip.Max.X == float.MaxValue) return;
 
-        var pinNode = &pin->AtkResNode;
-        var origin = new Vector2(
-            pinNode->ScreenX + pinNode->Width * pinNode->ScaleX / 2f,
-            pinNode->ScreenY + pinNode->Height * pinNode->ScaleY / 2f);
-
-        // PlayerMarkerX/Y est en coordonnees MONDE (mesure : identique a la position du
-        // joueur au dixieme pres), pas en pixels.
-        var playerWorld = new Vector2(addon->AreaMap.PlayerMarkerX, addon->AreaMap.PlayerMarkerY);
+        // Ancre = centre de la vue. MapOffsetX/Y donne sa position monde (mesure : egale a
+        // celle du joueur quand la carte le suit). Le pin joueur ne sert plus d'ancre : son
+        // ScreenX/Y saute de ~40 px quand la fleche tourne, d'ou la derive en marchant.
+        var origin = (clip.Min + clip.Max) / 2f;
+        var viewWorld = new Vector2(addon->AreaMap.MapOffsetX, addon->AreaMap.MapOffsetY);
         var scale = agent->CurrentMapSizeFactor / 100f * addon->AreaMap.MapScale;
         if (scale <= 0f) return;
 
-        var clip = ClipRect(addon);
         var draw = ImGui.GetBackgroundDrawList();
         draw.PushClipRect(clip.Min, clip.Max, true);
 
@@ -68,7 +64,9 @@ public sealed class MapOverlay
 
         foreach (var t in Targets)
         {
-            var pos = origin + (new Vector2(t.WorldPos.X, t.WorldPos.Z) - playerWorld) * scale;
+            var pos = origin + (new Vector2(t.WorldPos.X, t.WorldPos.Z) - viewWorld) * scale;
+            if (t.Kind == TargetKind.Quest) pos.Y += config.QuestOffsetY;
+
             var half = new Vector2(IconSize / 2f);
             var min = pos - half;
             var max = pos + half;
